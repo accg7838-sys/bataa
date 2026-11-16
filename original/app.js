@@ -1,0 +1,13 @@
+"use strict";
+const slides=[...document.querySelectorAll('.slide')],select=document.querySelector('#page-select'),prev=document.querySelector('#prev'),next=document.querySelector('#next'),motion=document.querySelector('#motion'),dialog=document.querySelector('#text-dialog');let current=1;
+const preference=matchMedia('(prefers-reduced-motion: reduce)');let enabled=!preference.matches;
+function setMotion(value){enabled=value;document.body.classList.toggle('no-motion',!value);motion.setAttribute('aria-pressed',String(value));motion.textContent=value?'Анимац ✓':'Анимац —';}
+if('IntersectionObserver' in window){document.body.classList.add('animated');const reveal=new IntersectionObserver(entries=>entries.forEach(e=>{e.target.classList.toggle('visible',e.isIntersecting)}),{threshold:0});slides.forEach(s=>reveal.observe(s));}
+setMotion(enabled);motion.addEventListener('click',()=>setMotion(!enabled));preference.addEventListener('change',e=>setMotion(!e.matches));
+function sync(n){current=n;select.value=String(n);prev.disabled=n===1;next.disabled=n===slides.length;document.body.style.setProperty('--reading-progress',String(n/slides.length));}
+function go(n){n=Math.max(1,Math.min(slides.length,n));sync(n);slides[n-1].scrollIntoView({behavior:enabled?'smooth':'instant',block:'start'});history.replaceState(null,'','#page-'+n);}
+select.addEventListener('change',()=>go(Number(select.value)));prev.addEventListener('click',()=>go(current-1));next.addEventListener('click',()=>go(current+1));
+let scheduled=false;window.addEventListener('scroll',()=>{if(!scheduled){scheduled=true;requestAnimationFrame(()=>{scheduled=false;let best=0,distance=Infinity;slides.forEach((s,i)=>{const r=s.getBoundingClientRect(),d=Math.abs(r.top+r.height/2-innerHeight/2);if(d<distance){best=i;distance=d;}});sync(best+1);});}},{passive:true});
+document.addEventListener('keydown',e=>{if(dialog.open||['SELECT','BUTTON','INPUT','TEXTAREA','A'].includes(document.activeElement.tagName)||e.altKey||e.ctrlKey||e.metaKey)return;if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();go(current+1)}if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(current-1)}if(e.key==='Home'){e.preventDefault();go(1)}if(e.key==='End'){e.preventDefault();go(slides.length)}});
+document.querySelector('#text-open').addEventListener('click',()=>{document.querySelector('#text-title').textContent=current+'-р хуудасны бичвэр';document.querySelector('#source-text').textContent=window.sourcePages[current-1];dialog.showModal()});document.querySelector('#text-close').addEventListener('click',()=>dialog.close());
+const initial=Number(location.hash.replace('#page-',''));sync(initial>=1&&initial<=23?initial:1);
